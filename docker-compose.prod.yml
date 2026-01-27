@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # LINE Bot 應用
+  linebot:
+    build: .
+    container_name: line-reminder-bot
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # LINE Bot 設定（必填）
+      - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
+      
+      # Flask 設定
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY}
+      
+      # PostgreSQL 資料庫設定
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-linebot}:${POSTGRES_PASSWORD:-linebot123}@postgres:5432/${POSTGRES_DB:-linebot}
+      
+      # 時區設定
+      - TIMEZONE=Asia/Taipei
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - linebot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL 資料庫
+  postgres:
+    image: postgres:15-alpine
+    container_name: line-reminder-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-linebot}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-linebot123}
+      - POSTGRES_DB=${POSTGRES_DB:-linebot}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - linebot-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-linebot}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # pgAdmin（可選，用於資料庫管理）
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: line-reminder-pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@example.com}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin}
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - linebot-network
+    profiles:
+      - tools
+
+networks:
+  linebot-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local

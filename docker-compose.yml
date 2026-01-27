@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  linebot:
+    build: .
+    container_name: line-reminder-bot
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # LINE Bot 設定 (必填)
+      - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
+      
+      # Flask 設定
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this}
+      
+      # 資料庫設定
+      - DATABASE_URL=sqlite:////app/data/reminders.db
+      
+      # 時區設定
+      - TIMEZONE=Asia/Taipei
+    volumes:
+      # 持久化資料庫
+      - ./data:/app/data
+      # 如果需要在開發時即時更新代碼，取消下面註解
+      # - .:/app
+    networks:
+      - linebot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  linebot-network:
+    driver: bridge
+
+volumes:
+  data:
