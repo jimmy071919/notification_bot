@@ -116,11 +116,24 @@ def check_and_send_reminders():
                     session.commit()
                     logger.info(f"[排程] 跳過 30 分鐘提醒（時間不足）: {event.description}")
                 
+                # 例外處理：如果 remind_level=3 但整點時間已過超過 2 分鐘
+                elif event.remind_level == 3 and time_diff < -2:
+                    # 直接標記為完成
+                    event.remind_level = 4
+                    session.commit()
+                    logger.info(f"[排程] 整點提醒時間已過，標記為完成: {event.description}")
+                
                 # 清理已過期且已完成的事件（事件時間過後 10 分鐘）
                 elif event.remind_level == 4 and time_diff < -10:
                     session.delete(event)
                     session.commit()
                     logger.info(f"[排程] 清理已完成事件: {event.description}")
+                
+                # 清理長時間未處理的舊事件（事件時間過後超過 1 天）
+                elif time_diff < -1440:
+                    session.delete(event)
+                    session.commit()
+                    logger.info(f"[排程] 清理過期事件（超過1天）: {event.description}, remind_level={event.remind_level}")
                     
             except Exception as e:
                 logger.error(f"[排程] 處理事件失敗: {event.id} - {e}")
