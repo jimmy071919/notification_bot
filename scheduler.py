@@ -32,9 +32,9 @@ def check_and_send_reminders():
         now = datetime.now(tz)
         logger.info(f"[排程] 開始檢查提醒 - {now.strftime('%Y-%m-%d %H:%M:%S')}")
         
-        # 查詢所有未完成的事件（remind_level < 3）
+        # 查詢所有未完成的事件（remind_level < 4）
         events = session.query(Event).filter(
-            Event.remind_level < 3
+            Event.remind_level < 4
         ).all()
         
         if not events:
@@ -53,48 +53,71 @@ def check_and_send_reminders():
                 
                 time_diff = (event_datetime - now).total_seconds() / 60  # 轉換為分鐘
                 
-                # 邏輯 A: 60 分鐘提醒
-                if event.remind_level == 0 and 58 <= time_diff <= 62:
-                    send_reminder(event, 60)
+                # 邏輯 A: 24 小時提醒 (1440 分鐘)
+                if event.remind_level == 0 and 1430 <= time_diff <= 1450:
+                    send_reminder(event, 1440)
                     event.remind_level = 1
+                    session.commit()
+                    logger.info(f"[排程] 已發送 24 小時提醒: {event.description}")
+                
+                # 邏輯 B: 60 分鐘提醒
+                elif event.remind_level == 1 and 58 <= time_diff <= 62:
+                    send_reminder(event, 60)
+                    event.remind_level = 2
                     session.commit()
                     logger.info(f"[排程] 已發送 60 分鐘提醒: {event.description}")
                 
-                # 邏輯 B: 30 分鐘提醒
-                elif event.remind_level == 1 and 28 <= time_diff <= 32:
+                # 邏輯 C: 30 分鐘提醒
+                elif event.remind_level == 2 and 28 <= time_diff <= 32:
                     send_reminder(event, 30)
-                    event.remind_level = 2
+                    event.remind_level = 3
                     session.commit()
                     logger.info(f"[排程] 已發送 30 分鐘提醒: {event.description}")
                 
-                # 邏輯 C: 整點提醒
-                elif event.remind_level == 2 and -2 <= time_diff <= 2:
+                # 邏輯 D: 整點提醒
+                elif event.remind_level == 3 and -2 <= time_diff <= 2:
                     send_reminder(event, 0)
-                    event.remind_level = 3
+                    event.remind_level = 4
                     session.commit()
                     logger.info(f"[排程] 已發送整點提醒: {event.description}")
                 
-                # 例外處理：如果事件在 1 小時內才創建，跳過已過的提醒階段
-                elif event.remind_level == 0 and time_diff < 58:
-                    if 28 <= time_diff <= 62:
-                        # 直接進入 30 分鐘提醒階段
+                # 例外處理：跳過已過的提醒階段
+                elif event.remind_level == 0 and time_diff < 1430:
+                    if 58 <= time_diff < 1430:
+                        # 跳過 24 小時，進入 60 分鐘提醒階段
                         event.remind_level = 1
+                        session.commit()
+                        logger.info(f"[排程] 跳過 24 小時提醒（時間不足）: {event.description}")
+                    elif 28 <= time_diff < 58:
+                        # 跳過 24 小時和 60 分鐘，進入 30 分鐘提醒階段
+                        event.remind_level = 2
+                        session.commit()
+                        logger.info(f"[排程] 跳過 24 小時+60 分鐘提醒（時間不足）: {event.description}")
+                    elif -2 <= time_diff < 28:
+                        # 直接進入整點提醒階段
+                        event.remind_level = 3
+                        session.commit()
+                        logger.info(f"[排程] 跳過 24 小時+60+30 分鐘提醒（時間不足）: {event.description}")
+                
+                # 例外處理：如果 remind_level=1 但時間已不足 60 分鐘
+                elif event.remind_level == 1 and time_diff < 58:
+                    if 28 <= time_diff < 58:
+                        event.remind_level = 2
                         session.commit()
                         logger.info(f"[排程] 跳過 60 分鐘提醒（時間不足）: {event.description}")
                     elif -2 <= time_diff < 28:
-                        # 直接進入整點提醒階段
-                        event.remind_level = 2
+                        event.remind_level = 3
                         session.commit()
                         logger.info(f"[排程] 跳過 60+30 分鐘提醒（時間不足）: {event.description}")
                 
-                # 例外處理：如果 remind_level=1 但時間已不足 30 分鐘
-                elif event.remind_level == 1 and time_diff < 28 and time_diff > -2:
-                    event.remind_level = 2
+                # 例外處理：如果 remind_level=2 但時間已不足 30 分鐘
+                elif event.remind_level == 2 and -2 <= time_diff < 28:
+                    event.remind_level = 3
                     session.commit()
                     logger.info(f"[排程] 跳過 30 分鐘提醒（時間不足）: {event.description}")
                 
                 # 清理已過期且已完成的事件（事件時間過後 10 分鐘）
-                elif event.remind_level == 3 and time_diff < -10:
+                elif event.remind_level == 4 and time_diff < -10:
                     session.delete(event)
                     session.commit()
                     logger.info(f"[排程] 清理已完成事件: {event.description}")

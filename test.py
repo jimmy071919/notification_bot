@@ -25,11 +25,11 @@ def test_parse_command():
         print(f"\n輸入: {test_input}")
         result = parse_command(test_input)
         if result:
-            print(f"✅ 解析成功")
+            print(f"解析成功")
             print(f"   時間: {format_datetime(result['event_datetime'])}")
             print(f"   描述: {result['description']}")
         else:
-            print(f"❌ 解析失敗")
+            print(f"解析失敗")
 
 
 def test_year_logic():

@@ -21,9 +21,10 @@ class Event(Base):
     remind_level = Column(Integer, default=0, nullable=False)
     # remind_level 說明:
     # 0: 未提醒
-    # 1: 已發送 60 分鐘提醒
-    # 2: 已發送 30 分鐘提醒
-    # 3: 已發送整點提醒（完成）
+    # 1: 已發送 24 小時提醒
+    # 2: 已發送 60 分鐘提醒
+    # 3: 已發送 30 分鐘提醒
+    # 4: 已發送整點提醒（完成）
     
     created_at = Column(DateTime, default=datetime.now)
     
