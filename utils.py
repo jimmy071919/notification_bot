@@ -6,7 +6,7 @@ from config import Config
 
 def parse_command(text):
     """
-    解析指令格式：/MM-DD HH:mm 事情描述
+    解析指令格式：/M-D H:m 事情描述 (月日時分可為 1-2 位數)
     
     Args:
         text: 用戶輸入的文字
@@ -14,8 +14,8 @@ def parse_command(text):
     Returns:
         dict: 包含 event_datetime 和 description，若解析失敗則返回 None
     """
-    # 正則表達式匹配
-    pattern = r'^/(\d{2})-(\d{2})\s+(\d{2}):(\d{2})\s+(.+)$'
+    # 正則表達式匹配 (支援 1-2 位數字)
+    pattern = r'^/(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})\s+(.+)$'
     match = re.match(pattern, text.strip())
     
     if not match:
@@ -63,7 +63,7 @@ def parse_command(text):
 
 def parse_remove_command(text):
     """
-    解析刪除指令格式：/rm MM-DD HH:mm 事情描述
+    解析刪除指令格式：/rm M-D H:m 事情描述 (月日時分可為 1-2 位數)
     
     Args:
         text: 用戶輸入的文字
@@ -71,8 +71,8 @@ def parse_remove_command(text):
     Returns:
         dict: 包含 event_datetime 和 description，若解析失敗則返回 None
     """
-    # 正則表達式匹配
-    pattern = r'^/rm\s+(\d{2})-(\d{2})\s+(\d{2}):(\d{2})\s+(.+)$'
+    # 正則表達式匹配 (支援 1-2 位數字)
+    pattern = r'^/rm\s+(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})\s+(.+)$'
     match = re.match(pattern, text.strip())
     
     if not match:
