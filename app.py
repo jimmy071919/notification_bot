@@ -131,6 +131,21 @@ def handle_event(event_data):
         # 儲存到資料庫
         session = Session()
         try:
+            # 檢查是否已存在相同的事件
+            existing_event = session.query(Event).filter(
+                Event.group_id == group_id,
+                Event.event_datetime == parsed['event_datetime'],
+                Event.description == parsed['description']
+            ).first()
+            
+            if existing_event:
+                # 已存在相同的事件
+                time_str = format_datetime(parsed['event_datetime'])
+                reply_message = f"⚠️ 此提醒已經存在！\n\n📅 時間：{time_str}\n📝 事項：{parsed['description']}"
+                send_reply(reply_token, reply_message)
+                logger.info(f"⚠️ 提醒已存在，未重複建立: 時間={time_str}")
+                return
+            
             new_event = Event(
                 group_id=group_id,
                 event_datetime=parsed['event_datetime'],
